@@ -622,16 +622,19 @@ router.post("/devices/:id/tasks", async (ctx) => {
   const lastInform = device["Events.Inform"].value[0] as number;
 
   let status = await apiFunctions.connectionRequest(deviceId, device);
-  if (!status) {
+  logger.accessInfo({message: "testing"});
+  logger.accessInfo({status});
+  if (!status || status == "Device is offline" || status == "") {
     const sessionStarted = await apiFunctions.awaitSessionStart(
       deviceId,
       lastInform,
       onlineThreshold,
     );
     if (!sessionStarted) {
-      status = "No contact from CPE";
+      status = "";
     } else {
       const sessionEnded = await apiFunctions.awaitSessionEnd(deviceId, 120000);
+      status = "";
       if (!sessionEnded) status = "Session took too long to complete";
     }
   }
@@ -646,7 +649,7 @@ router.post("/devices/:id/tasks", async (ctx) => {
       r.status = res[i] ? "fault" : "done";
   }
 
-  await Promise.all(statuses.map((t) => db.deleteTask(new ObjectId(t._id))));
+  // await Promise.all(statuses.map((t) => db.deleteTask(new ObjectId(t._id))));
 
   // Restore socket timeout
   if (socketTimeout) ctx.socket.setTimeout(socketTimeout);
